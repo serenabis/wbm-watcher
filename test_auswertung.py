@@ -95,6 +95,25 @@ pruefe("Grenz-PLZ wird gemeldet, aber markiert",
        kriterien.lage_status(beispiel, lage) == "unklar"
        and kriterien.passt(beispiel, lage))
 
+aus = kriterien.laden({"kriterien": {"bezirke_aus": ["Spandau"]}})
+pruefe("ausgeschlossenes Gebiet faellt raus",
+       not kriterien.passt(dict(beispiel, area="Spandau"), aus))
+pruefe("ohne Ausschluss bleibt alles andere drin", kriterien.passt(beispiel, aus))
+
+fein = kriterien.laden({"kriterien": {"gebiete_mit_plz": {
+    "Lichtenberg": {"ja": ["10365"], "unklar": ["10367"]}}}})
+lichtenberg = dict(beispiel, area="Lichtenberg")
+pruefe("Wunsch-Ortsteil bleibt",
+       kriterien.lage_status(dict(lichtenberg, zipCode="10365"), fein) == "ja")
+pruefe("Grenz-Ortsteil wird markiert",
+       kriterien.lage_status(dict(lichtenberg, zipCode="10367"), fein) == "unklar")
+pruefe("fremder Ortsteil desselben Bezirks faellt raus",
+       kriterien.lage_status(dict(lichtenberg, zipCode="12555"), fein) == "nein")
+pruefe("Ortsteil ohne PLZ wird gemeldet",
+       kriterien.lage_status(dict(lichtenberg, zipCode=""), fein) == "unklar")
+pruefe("nicht eingegrenzte Gebiete bleiben unberuehrt",
+       kriterien.lage_status(beispiel, fein) == "ja")
+
 ohne_wbs = kriterien.laden({"kriterien": {"wbs": "nein"}})
 pruefe("Wohnung ohne WBS-Pflicht bleibt", kriterien.passt(beispiel, ohne_wbs))
 pruefe("Wohnung mit WBS-Pflicht faellt raus",

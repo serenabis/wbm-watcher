@@ -100,10 +100,17 @@ eingeschränkt – der Watcher meldet also jede neue WBM-Wohnung.
 ```json
 {
   "kriterien": {
-    "bezirke": ["Mitte", "Friedrichshain", "Lichtenberg"],
+    "bezirke_aus": ["Spandau"],
+    "gebiete_mit_plz": {
+      "Lichtenberg": {
+        "ja": ["10365"],
+        "unklar": ["10315", "10317", "10367", "10369"]
+      }
+    },
+    "bezirke": [],
     "plz": [],
-    "plz_unklar": ["10367"],
-    "min_zimmer": 2,
+    "plz_unklar": [],
+    "min_zimmer": null,
     "max_zimmer": null,
     "min_flaeche": null,
     "max_flaeche": null,
@@ -114,8 +121,14 @@ eingeschränkt – der Watcher meldet also jede neue WBM-Wohnung.
 }
 ```
 
+Die Lage wird in vier Stufen geprüft: erst `bezirke_aus`, dann
+`gebiete_mit_plz`, dann die Positivliste aus `bezirke`/`plz`, und wenn nichts
+davon gesetzt ist, passt jede Lage.
+
 | Feld | Bedeutung |
 | --- | --- |
+| `bezirke_aus` | Gebiete, die **nie** gemeldet werden. So lässt sich „überall, nur nicht dort" sagen, ohne alle erwünschten Gebiete aufzuzählen – eine solche Liste wäre unvollständig, sobald die WBM in einer bislang unbekannten Gegend baut. |
+| `gebiete_mit_plz` | Grenzt einzelne Gebiete auf Ortsteile ein: dort zählt nur noch die Postleitzahl. `ja` meldet normal, `unklar` meldet mit dem Hinweis „Ortsteil prüfen". Für Bezirke, von denen nur ein Teil in Frage kommt. |
 | `bezirke` | Gebiete, wie die WBM sie nennt – mal Bezirk, mal Ortsteil: `Mitte`, `Friedrichshain`, `Spandau`, `Lichtenberg` … Groß-/Kleinschreibung egal. Leer = jede Lage. |
 | `plz` | Zusätzlich erlaubte Postleitzahlen – für Ortsteile, die im Gebietsnamen nicht auftauchen. |
 | `plz_unklar` | Postleitzahlen auf Ortsteilgrenzen. Diese Wohnungen werden **gemeldet**, in der Mail aber mit „Ortsteil prüfen" markiert – lieber ein Inserat zu viel ansehen als eines verpassen. |

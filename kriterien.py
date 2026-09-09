@@ -18,6 +18,8 @@ import os
 import wbm
 
 VORGABE = {
+    "bezirke_aus": [],
+    "gebiete_mit_plz": {},
     "bezirke": [],
     "plz": [],
     "plz_unklar": [],
@@ -58,17 +60,47 @@ def lage_status(item, kriterien):
     """'ja', 'unklar' oder 'nein' - liegt die Wohnung im Wunschgebiet?
 
     Die WBM nennt in der Uebersicht ein Gebiet ("Mitte", "Friedrichshain") -
-    mal Bezirk, mal Ortsteil. Wer genauer werden will, nennt zusaetzlich PLZ.
-    Ist gar nichts gesetzt, passt jede Lage.
+    mal Bezirk, mal Ortsteil. Ist gar nichts gesetzt, passt jede Lage.
+
+    Vier Stufen, in dieser Reihenfolge:
+
+    1. `bezirke_aus` schliesst ganze Gebiete aus. So laesst sich "ueberall,
+       nur nicht dort" sagen, ohne alle erwuenschten Gebiete aufzuzaehlen -
+       eine Liste, die unvollstaendig waere, sobald die WBM in einer bislang
+       unbekannten Gegend baut.
+    2. `gebiete_mit_plz` grenzt einzelne Gebiete auf Ortsteile ein: dort zaehlt
+       nur noch die Postleitzahl. Fuer Bezirke, von denen nur ein Teil in Frage
+       kommt (Lichtenberg ja, Friedrichsfelde nein).
+    3. `bezirke` und `plz` sind die einfache Positivliste.
+    4. Ist keine davon gesetzt, passt jede Lage.
     """
+    gebiet_roh = (item.get("area") or "").strip()
+    plz_roh = (item.get("zipCode") or "").strip()
+
+    if _norm(gebiet_roh) in [_norm(b) for b in kriterien.get("bezirke_aus") or []]:
+        return "nein"
+
+    fein = {
+        _norm(name): regel
+        for name, regel in (kriterien.get("gebiete_mit_plz") or {}).items()
+    }
+    regel = fein.get(_norm(gebiet_roh))
+    if regel is not None:
+        if plz_roh in [str(p).strip() for p in regel.get("ja") or []]:
+            return "ja"
+        if plz_roh in [str(p).strip() for p in regel.get("unklar") or []]:
+            return "unklar"
+        # Ohne PLZ laesst sich nichts entscheiden - lieber melden als verlieren.
+        return "unklar" if not plz_roh else "nein"
+
     bezirke = [_norm(b) for b in kriterien.get("bezirke") or []]
     plz_liste = [str(p).strip() for p in kriterien.get("plz") or []]
     plz_unklar = [str(p).strip() for p in kriterien.get("plz_unklar") or []]
     if not bezirke and not plz_liste and not plz_unklar:
         return "ja"
 
-    gebiet = _norm(item.get("area"))
-    plz = (item.get("zipCode") or "").strip()
+    gebiet = _norm(gebiet_roh)
+    plz = plz_roh
 
     if plz and plz in plz_unklar:
         return "unklar"

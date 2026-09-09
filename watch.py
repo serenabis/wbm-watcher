@@ -447,7 +447,14 @@ def report_error(state, message, dry_run):
 def durchlauf(args):
     load_env_file()
     config = load_json(CONFIG_PATH, {})
+    # Die Kriterien gehoeren niemandem ausser dir: in einem oeffentlichen
+    # Repository stehen sie im Secret WBM_KRITERIEN (lokal in .env),
+    # config.json dient nur als Rueckfallebene.
     filter_kriterien = kriterien.laden(config)
+    if not any(filter_kriterien[name] for name in kriterien.VORGABE
+               if name != "wbs"):
+        print("Warnung: keine Suchkriterien gesetzt (WBM_KRITERIEN) - es wird "
+              "jede neue Wohnung gemeldet.", file=sys.stderr)
 
     state = load_json(STATE_PATH, {})
     seen = state.get("seen") or {}
