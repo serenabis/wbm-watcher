@@ -187,7 +187,15 @@ def diagnose(fehler):
     kopf = "MAILVERSAND FEHLGESCHLAGEN (%s)" % host
     strich = "=" * len(kopf)
 
-    if isinstance(fehler, smtplib.SMTPAuthenticationError):
+    if isinstance(fehler, UnicodeEncodeError):
+        grund = (
+            "SMTP_USER oder SMTP_PASS enthaelt ein Sonderzeichen (Umlaut, ß),\n"
+            "das der Mailserver bei der Anmeldung nicht akzeptiert.\n\n"
+            "Sicherste Loesung: bei web.de/GMX ein 'App-Passwort' (Mail-Passwort\n"
+            "fuer externe Programme) erzeugen - das besteht nur aus Buchstaben\n"
+            "und Ziffern - und als SMTP_PASS hinterlegen."
+        )
+    elif isinstance(fehler, smtplib.SMTPAuthenticationError):
         grund = (
             "Der Server hat die Anmeldung abgelehnt.\n\n"
             "Da derselbe Zugang lokal funktioniert hat, ist die wahrscheinlichste\n"
@@ -239,9 +247,41 @@ def send_mail(subject, text_body, html_body=None):
         if not cfg["implicit_tls"]:
             server.starttls(context=context)
             server.ehlo()
-        server.login(cfg["user"], cfg["password"])
+        anmelden(server, cfg["user"], cfg["password"])
         server.send_message(message)
     return cfg["recipients"]
+
+
+def anmelden(server, user, password):
+    """Am SMTP-Server anmelden, auch mit Umlauten/ß in den Zugangsdaten.
+
+    Pythons smtplib kodiert Benutzer und Passwort bei der Anmeldung hart als
+    ASCII (`base64(user.encode("ascii"))`). Ein einziges 'ß' im Passwort laesst
+    das mit einem UnicodeEncodeError abbrechen - fuer den Absender voellig
+    undurchsichtig. SASL ist aber byteorientiert und heute UTF-8: enthaelt das
+    Passwort etwa den utf-8-kodierten Text, akzeptiert der Server AUTH PLAIN mit
+    genau diesen Bytes. Deshalb: erst den normalen Weg versuchen, und nur wenn
+    er an der ASCII-Kodierung scheitert, AUTH PLAIN selbst in UTF-8 schicken.
+    """
+    try:
+        server.login(user, password)
+        return
+    except UnicodeEncodeError:
+        pass
+
+    if not server.has_extn("auth"):
+        raise smtplib.SMTPException(
+            "Server bietet keine Anmeldung an, das Passwort enthaelt aber "
+            "Sonderzeichen - bitte ein ASCII-Passwort (App-Passwort) verwenden."
+        )
+
+    import base64
+    token = base64.b64encode(
+        b"\0" + user.encode("utf-8") + b"\0" + password.encode("utf-8")
+    ).decode("ascii")
+    code, resp = server.docmd("AUTH", "PLAIN " + token)
+    if code not in (235, 503):
+        raise smtplib.SMTPAuthenticationError(code, resp)
 
 
 # --------------------------------------------------------------------------
