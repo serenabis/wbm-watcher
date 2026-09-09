@@ -1,0 +1,25 @@
+{
+ "_hinweis": "Die Suchkriterien werden hier eingetragen. Wenn das Repository oeffentlich ist und niemand sehen soll, wonach du suchst, lass diesen Abschnitt leer und setze stattdessen die Umgebungsvariable WBM_KRITERIEN (lokal in .env, bei GitHub als Secret) auf denselben JSON-Block.",
+ "_felder": {
+  "bezirke": "Liste der Gebiete, wie die WBM sie nennt (z. B. \"Mitte\", \"Friedrichshain\", \"Spandau\", \"Lichtenberg\"). Leer = jede Lage.",
+  "plz": "Zusaetzlich erlaubte Postleitzahlen - fuer Ortsteile, die im Gebietsnamen nicht auftauchen.",
+  "plz_unklar": "Postleitzahlen auf Ortsteilgrenzen: Diese Wohnungen werden gemeldet, aber in der Mail als 'Ortsteil pruefen' markiert.",
+  "min_zimmer/max_zimmer": "Zimmerzahl, Zahl oder null.",
+  "min_flaeche/max_flaeche": "Wohnflaeche in m2, Zahl oder null.",
+  "max_kaltmiete": "Nettokaltmiete in Euro (steht nur auf der Detailseite).",
+  "max_warmmiete": "Warmmiete in Euro.",
+  "wbs": "\"egal\", \"nein\" (nur Wohnungen ohne WBS-Pflicht) oder \"ja\" (nur mit)."
+ },
+ "kriterien": {
+  "bezirke": [],
+  "plz": [],
+  "plz_unklar": [],
+  "min_zimmer": null,
+  "max_zimmer": null,
+  "min_flaeche": null,
+  "max_flaeche": null,
+  "max_kaltmiete": null,
+  "max_warmmiete": null,
+  "wbs": "egal"
+ }
+}

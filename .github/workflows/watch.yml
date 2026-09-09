@@ -1,0 +1,77 @@
+name: WBM-Watcher
+
+on:
+  schedule:
+    # Alle 30 Minuten einen Job starten, der dann 28 Minuten lang selbst im
+    # Minutentakt nachschaut. GitHub haelt geplante Startzeiten nicht ein -
+    # unter Last vergehen 10 bis 30 Minuten. Nicht der Cron bestimmt also die
+    # Reaktionszeit, sondern die Schleife im Job.
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      testmail:
+        description: "Nur eine Testmail verschicken (prueft den Versand)"
+        type: boolean
+        default: false
+
+# Nie zwei Laeufe gleichzeitig: sonst wuerden beide dieselben Wohnungen
+# als neu melden und sich beim Zurueckschreiben des Zustands ins Gehege kommen.
+# Der laufende Job hat Vorrang - ein verspaetet gestarteter Cron-Lauf wartet
+# also nicht in der Schlange, sondern faellt weg, sobald ohnehin geprueft wird.
+concurrency:
+  group: wbm-watcher
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    # Etwas mehr als die 28 Minuten Schleife, damit der Job selbst aussteigt
+    # und nicht von GitHub abgeschnitten wird - sonst bliebe der Zustand
+    # ungesichert.
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+
+      # Kein setup-python noetig: Auf den Ubuntu-Runnern ist Python 3 bereits
+      # installiert, und der Watcher kommt ohne Zusatzbibliotheken aus. Das
+      # spart bei ~288 Laeufen taeglich spuerbar Zeit.
+      - name: Python-Version anzeigen
+        run: python3 --version
+
+      - name: Auf neue Wohnungen pruefen
+        env:
+          WBM_KRITERIEN: ${{ secrets.WBM_KRITERIEN }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: |
+          if [ "${{ inputs.testmail }}" = "true" ]; then
+            python3 watch.py --test-mail
+          else
+            python3 watch.py --dauer 1680
+          fi
+
+      - name: Zustand sichern
+        if: ${{ inputs.testmail != true }}
+        run: |
+          if git diff --quiet -- state/seen.json; then
+            echo "Keine Aenderung am Zustand."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/seen.json
+          git commit -m "Zustand: $(date -u '+%Y-%m-%d %H:%M UTC')"
+          # Bei parallelen Laeufen kann der Push veralten - einmal nachziehen.
+          for attempt in 1 2 3; do
+            if git push; then exit 0; fi
+            git pull --rebase --autostash
+          done
+          echo "Zustand konnte nicht gesichert werden." >&2
+          exit 1
