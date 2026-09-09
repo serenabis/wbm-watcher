@@ -614,24 +614,46 @@ def main():
     # zurueckgeschrieben wird er einmal am Jobende durch den Workflow.
     schluss = time.monotonic() + args.dauer
     runde = 0
+    letzter_fehler = None
     while True:
         runde += 1
         print("--- Durchlauf %d (%s UTC)"
               % (runde, now().strftime("%H:%M:%S")), flush=True)
         try:
             durchlauf(args)
+            letzter_fehler = None
         except Exception as fehler:  # noqa: BLE001 - ein Aussetzer darf den
             # laufenden Job nicht beenden, sonst schweigt der Waechter bis zum
             # naechsten geplanten Start.
             print("Durchlauf fehlgeschlagen: %s" % fehler, file=sys.stderr,
                   flush=True)
+            letzter_fehler = fehler
+            if ist_anmeldefehler(fehler):
+                # Ein abgelehntes Passwort heilt nicht von selbst. Weiterlaufen
+                # hiesse, sich 28 Minuten lang im Minutentakt erfolglos
+                # anzumelden - und genau daran sperren Mailanbieter Konten.
+                print("Abbruch: Der Mailserver nimmt die Zugangsdaten nicht an.",
+                      file=sys.stderr, flush=True)
+                return 1
 
         pause = taktweite(now())
         if time.monotonic() + pause >= schluss:
             print("Zeitfenster ausgeschoepft nach %d Durchlaeufen." % runde,
                   flush=True)
-            return 0
+            # Nicht mit 0 enden, wenn der letzte Versuch scheiterte: sonst meldet
+            # GitHub einen gruenen Job, obwohl der Waechter nichts zustellen
+            # konnte - und das faellt monatelang niemandem auf.
+            return 1 if letzter_fehler is not None else 0
         time.sleep(pause)
+
+
+def ist_anmeldefehler(fehler):
+    """Ist das ein Problem mit den Zugangsdaten - also nichts, was Warten heilt?"""
+    if isinstance(fehler, (smtplib.SMTPAuthenticationError, UnicodeEncodeError)):
+        return True
+    if isinstance(fehler, smtplib.SMTPResponseException):
+        return fehler.smtp_code in (530, 535, 538)
+    return False
 
 
 if __name__ == "__main__":

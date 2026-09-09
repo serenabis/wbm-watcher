@@ -179,7 +179,9 @@ export SMTP_HOST=smtp.web.de SMTP_USER=... SMTP_PASS=... MAIL_TO=...
 python3 watch.py --test-mail  # nur eine Testmail
 python3 watch.py              # echter Lauf
 
-python3 test_konfiguration.py       # Zugangsdaten einlesen
+python3 test_zugang.py             # Mailversand pruefen (fragt das Passwort ab)
+python3 test_zugang.py --aus-env   # dasselbe mit den Werten aus .env
+python3 test_konfiguration.py      # Zugangsdaten einlesen
 python3 test_auswertung.py          # Auswertung gegen gespeicherte Seiten
 python3 test_auswertung.py --live   # zusätzlich gegen die echte Seite
 ```
@@ -193,6 +195,7 @@ umgebaut hat, verrät `--live`.
 | Datei                            | Zweck                                              |
 |----------------------------------|----------------------------------------------------|
 | `wbm.py`                         | Abruf und Auswertung der Angebotsseite              |
+| `test_zugang.py`                 | prueft Zugangsdaten mit einem Anmeldeversuch        |
 | `kriterien.py`                   | Auswahl nach den eigenen Suchkriterien              |
 | `watch.py`                       | Abgleich mit dem Stand, Mailversand                 |
 | `config.json`                    | Suchkriterien                                       |
@@ -203,6 +206,12 @@ umgebaut hat, verrät `--live`.
 `state/seen.json` wird vom Workflow nach jedem Lauf ins Repository
 zurückgeschrieben. Das ist zugleich praktisch, weil regelmäßige Commits
 verhindern, dass GitHub den Zeitplan nach 60 Tagen Inaktivität abschaltet.
+
+Schlägt der **Mailversand** fehl, bricht der Lauf sofort ab und der Job wird
+**rot**. Das ist Absicht: Ein Anmeldefehler heilt nicht von selbst, und ein grün
+gemeldeter Job, der nichts zustellen konnte, fällt monatelang niemandem auf.
+Wiederholte Fehlanmeldungen im Minutentakt sind außerdem der schnellste Weg,
+sich sein Mailkonto sperren zu lassen.
 
 Einträge, die 90 Tage nicht mehr in den Angeboten auftauchten, werden vergessen –
 die Datei wächst also nicht unbegrenzt. Bei Störungen (Seite nicht erreichbar,
