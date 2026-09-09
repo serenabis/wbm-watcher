@@ -158,11 +158,14 @@ Zusage. Geplante Läufe werden unter Last 10 bis 30 Minuten verzögert oder ganz
 Deshalb startet der Cron nur alle **30 Minuten** einen Job, und dieser Job prüft
 **28 Minuten lang selbst weiter** (`watch.py --dauer 1680`):
 
-* werktags 5–20 Uhr UTC: **jede Minute**
-* sonst: alle 5 Minuten
+* werktags 5–20 Uhr UTC: **alle 5 Minuten**
+* sonst: alle 15 Minuten
 
-Die Reaktionszeit liegt damit bei rund einer Minute. Ein Durchlauf ist eine
-einzige HTML-Seite; Detailseiten kommen nur bei tatsächlicher Bewegung dazu.
+Bewusst gemächlicher als beim Schwesterprojekt: Der gesamte WBM-Bestand sind
+rund ein Dutzend Wohnungen, die sich ein paarmal pro Woche bewegen. Ein
+Minutentakt würde daran nichts verbessern, sondern nur die fremde Seite
+belasten. Ein Durchlauf ist eine einzige HTML-Seite; Detailseiten kommen nur
+bei tatsächlicher Bewegung dazu.
 
 Der Zustand wird während der Schleife nur in die Datei geschrieben; ins
 Repository zurück schreibt ihn der Workflow einmal am Jobende – sonst entstünden

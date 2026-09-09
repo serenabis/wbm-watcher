@@ -37,13 +37,16 @@ FORGET_AFTER_DAYS = 90
 ERROR_MAIL_EVERY_HOURS = 12
 
 # Takt im Schleifenbetrieb (--dauer). Die WBM stellt ihre Wohnungen zu
-# Buerozeiten ein, nicht nachts und kaum am Wochenende. Deshalb tagsueber
-# jede Minute schauen und sonst deutlich seltener - das haelt die Last auf der
-# fremden Seite in dem Rahmen, den ein aufmerksamer Mensch auch erzeugt.
-# Ein Aufruf ist eine einzige HTML-Seite; Detailseiten werden nur fuer neue
-# Wohnungen geholt.
-TAKT_AKTIV_SEKUNDEN = 60
-TAKT_RUHE_SEKUNDEN = 300
+# Buerozeiten ein, nicht nachts und kaum am Wochenende.
+#
+# Bewusst gemaechlicher als beim Schwesterprojekt: Der gesamte WBM-Bestand sind
+# rund ein Dutzend Wohnungen, die sich ein paarmal pro Woche bewegen. Ein
+# Minutentakt wuerde daran nichts verbessern, sondern nur die fremde Seite
+# belasten - fuenf Minuten kosten im schlechtesten Fall vier Minuten
+# Reaktionszeit und sind damit immer noch schneller, als GitHubs Cron allein
+# je waere.
+TAKT_AKTIV_SEKUNDEN = 300
+TAKT_RUHE_SEKUNDEN = 900
 # In UTC, denn der GitHub-Runner laeuft in UTC: 05-20 Uhr UTC deckt die
 # Berliner Kernzeit im Sommer wie im Winter ab.
 AKTIV_STUNDEN_UTC = range(5, 21)
